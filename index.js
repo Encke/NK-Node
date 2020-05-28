@@ -1,0 +1,387 @@
+const path					= require( 'path' );
+const { execSync }			= require( 'child_process' );
+const cors					= require( 'cors' );
+const cookiesMiddleware		= require( 'universal-cookie-express' );
+const crypto				= require( 'crypto' );
+const db					= require( './mongo' );
+const express				= require( 'express' );
+const fs					= require( 'fs' );
+const http					= require( 'http' );
+const https					= require( 'https' );
+const qS					= require( 'querystring' );
+const fileUpload			= require( 'express-fileupload' );
+const SOAP					= require( 'strong-soap' ).soap;
+const SSH2					= require( 'ssh2' );
+const eMailer				= require( 'nodemailer' );
+
+const DIVI_FEE_PERCENT		= 0.0001;
+const DIVI_MINIMUM			= 0.1;
+const DIVI_FEE_MAX			= 100;
+const SSNSZE				= 64;
+
+module.exports = {
+	db: db,
+	crypto: crypto,
+	app: null,
+	start: ( databaseName, telegramToken, telegramURL, callback ) => {
+		if( telegramToken )	{
+			module.exports.telegram.load( telegramToken, telegramURL );
+		}
+		let databaseLoaded = () => {
+			module.exports.update.check();
+			callback();
+		};
+		if( databaseName )	{
+			db.start( databaseName, "127.0.0.1", 27017, databaseLoaded );
+		}	else	{
+			databaseLoaded();
+		}
+	},
+	shell: ( command ) => {
+		let shellText = "";
+		let shellResult = null;
+		try	{
+			shellResult = execSync( command, { stdio: 'pipe' } );
+		}	catch( e )	{
+			shellText = e.stderr.toString();
+		}
+		if( shellResult )	{
+			shellText = shellResult.toString();
+		}
+		return shellText.trim();
+	},
+	coin: ( name, command ) => {
+		let cmdResult = module.exports.shell( "/usr/local/bin/" + name.toLowerCase() + "-cli -conf=/var/coins/" + name + "/" + name.toLowerCase() + ".conf -datadir=/var/coins/" + name + "/ " + command );
+		return ( ( cmdResult.substr( 0, 7 ) == "error: " )? cmdResult.substr( 7 ): cmdResult );
+	},
+	coinBal: ( name, addresses ) => {
+		let balance = 0;
+		if( name == "divi" )	{
+			balance = module.exports.parse( module.exports.coin( name, ( "getaddressbalance '" + module.exports.stringify( { addresses: ( Array.isArray( addresses )? addresses: [addresses] ) } ) + "'" ) ) );
+		}	else	{
+			balance = { balance: parseFloat( module.exports.coin( name, ( "getreceivedbyaddress " + addresses ) ) * 100000000 ) };
+		}
+		return parseFloat( ( balance? balance.balance / 100000000: 0 ) );
+	},
+	coinRec: ( name, addresses ) => {
+		return parseFloat( module.exports.parse( module.exports.coin( name, ( "getaddressbalance '" + module.exports.stringify( { addresses: ( Array.isArray( addresses )? addresses: [addresses] ) } ) + "'" ) ) ).received / 100000000 );
+	},
+	coinValidate: ( address ) => {
+		let valid = false;
+		if( address && ( address.length == 34 ) )	{
+			let buf = module.exports.coin( name, ( "validateaddress " + address ) );
+			if( buf && ( buf.length > 0 ) )	{
+				let addressData = module.exports.parse( buf );
+				valid = ( addressData && !!addressData.isvalid );
+			}
+		}
+		return valid;
+	},
+	diviFee: ( amount ) => {
+		let fee = ( DIVI_FEE_PERCENT * amount );
+		return ( ( fee > DIVI_FEE_MAX )? DIVI_FEE_MAX: fee );
+	},
+	diviSend: ( fromAddr, toAddr, amount, callback ) => {
+		if( amount > 0 )	{
+			let distList = {};
+			distList[toAddr] = amount;
+			let privateKey = module.exports.divi( "dumpprivkey '" + fromAddr + "'" ).trim();
+			let unspent = module.exports.parse( module.exports.divi( "listunspent 6 999999999 '" + module.exports.stringify( [ fromAddr ] ) + "'" ).trim() );
+			let inputTrans = [];
+			let inputTransSign = [];
+			let inputTransSignPKs = [];
+			let outputTrans = {};
+			let totalDIVI = 0;
+			for( let i = 0; i < unspent.length; i++ )	{
+				if( unspent[i] && unspent[i].spendable )	{
+					totalDIVI += unspent[i].amount;
+					let transData = { txid: unspent[i].txid, vout: unspent[i].vout };
+					inputTrans.push( transData );
+					transData.scriptPubKey = unspent[i].scriptPubKey;
+					inputTransSign.push( transData );
+					inputTransSignPKs.push( privateKey );
+				}
+			}
+			if( totalDIVI > 0 )	{
+				let remaining = ( totalDIVI - amount - module.exports.diviFee( totalDIVI ) );
+				if( remaining > DIVI_MINIMUM )	{
+					distList[fromAddr] = remaining;
+				}
+				let transHex = module.exports.divi( "createrawtransaction '" + module.exports.stringify( inputTrans ) + "' '" + module.exports.stringify( distList ) + "'" );
+				if( transHex && ( transHex.length > 60 ) )	{
+					let transBuff = module.exports.parse( module.exports.divi( "signrawtransaction '" + transHex + "' '" + module.exports.stringify( inputTransSign ) + "' '" + module.exports.stringify( inputTransSignPKs ) + "'" ) );
+					if( transBuff && transBuff.hex && ( transBuff.hex.length > 20 ) )	{
+						let transHash = transBuff.hex;
+						callback( module.exports.divi( "decoderawtransaction '" + transHash + "'" ) );
+						//callback( module.exports.divi( "sendrawtransaction '" + transHash + "'" ) );
+						callback = null;
+					}
+				}
+			}
+		}
+		if( callback )	{
+			callback( null );
+		}
+	},
+	now: () => {
+		return ( new Date() ).getTime();
+	},
+	md5: ( value ) => {
+		return module.exports.crypto.createHash( "md5" ).update( value ).digest( "hex" );
+	},
+	isoDatetime: ( start ) => {
+		let thisDateString = "";
+		try	{
+			thisDateString = ( new Date( start? parseInt( start ): null ) ).toISOString();
+		}	catch ( e )	{}
+		return thisDateString;
+	},
+	replaceAll: ( findThis, replace, string ) => {
+		return string.split( findThis ).join( replace );
+	},
+	onlyNums: ( string ) => {
+		return string.replace( /[^0-9]/g, "" );
+	},
+	objCopy: ( copyThis ) => {
+		return module.exports.parse( module.exports.stringify( copyThis ) );
+	},
+	stringify: ( data ) => {
+		let response = "";
+		try	{
+			response = JSON.stringify( data );
+		}	catch( error )	{}
+		return response;
+	},
+	parse: ( data ) => {
+		let response = null;
+		try	{
+			response = JSON.parse( data );
+		}	catch( error )	{}
+		return response;
+	},
+	addCommas: ( x ) => {
+		let parts = x.toString().split( "." );
+		parts[0] = parts[0].replace( /\B(?=(\d{3})+(?!\d))/g, "," );
+		return parts.join( "." );
+	},
+	randomString: ( length ) => {
+		let possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+		let text = "";
+		while( text.length < length )	{
+			text += possible.charAt( Math.floor( Math.random() * possible.length ) );
+		}
+		return text;
+	},
+	randomInt: ( min, max ) => {
+		return Math.floor( Math.random() * ( Math.floor( max ) - Math.ceil( min ) + 1 ) ) + Math.ceil( min );
+	},
+	files: {
+		getDirList: ( folder ) => {
+			return fs.readdirSync( folder );
+		},
+		read: ( fileName ) => {
+			try	{
+				return fs.readFileSync( fileName, "utf8" );
+			}	catch( e )	{
+				return null;
+			}
+		},
+		mkdir: ( folder ) => fs.mkdirSync( folder ),
+		rmdir: ( folder ) => fs.rmdirSync( folder ),
+		delete: ( fileName ) => fs.unlinkSync( fileName ),
+		exists: ( fileName ) => fs.existsSync( fileName ),
+		write: ( fileName, fileData ) => fs.writeFileSync( fileName, fileData ),
+		append: ( fileName, fileData ) => fs.appendFileSync( fileName, fileData ),
+		copy: ( sourceFile, destFile ) => fs.copyFileSync( sourceFile, destFile ),
+		untar: ( fileName, extractTo ) => fs.createReadStream( fileName ).pipe( gunzip() ).pipe( tar.extract( extractTo ) )
+	},
+	getIPData: ( ip, callback ) => {
+		module.exports.http( true, "ipfind.co", "GET", 443, null, ( "/?ip=" + ip + "&auth=60bb060e-9601-412e-8a49-891cf1c1402f" ), null, ( webData ) => {
+				callback( module.exports.parse( webData ) );
+			});
+	},
+	getIP: ( req ) => {
+		let thisIP = ( req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.socket.remoteAddress
+			|| ( req.connection.socket? req.connection.socket.remoteAddress: null ) );
+		return ( ( ( thisIP.substr( 0, 7 ) == "::ffff:" ) && module.exports.checkIP( thisIP.substr( 7 ) ) )? thisIP.substr( 7 ): thisIP );
+	},
+	checkIP: ( ip ) => {
+		return /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test( ip );
+	},
+	checkEmail: ( email ) => {
+		return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test( email );
+	},
+	xpr: {
+		homeFileLocation: null,
+		keyCertFile: null,
+		load: ( keyCertFile ) => {
+			module.exports.xpr.keyCertFile = keyCertFile;
+			module.exports.app = express();
+			module.exports.app.use( express.urlencoded( { extended: false } ) );
+			module.exports.app.use( express.json() );
+			module.exports.app.use( cors() );
+			module.exports.app.use( cookiesMiddleware() );
+			module.exports.app.use( fileUpload() );
+			module.exports.app.use( module.exports.oauth2.inject() );
+		},
+		start: ( port, callback ) => ( module.exports.xpr.keyCertFile? https.createServer( { key: module.exports.files.read( "/etc/letsencrypt/live/" + module.exports.xpr.keyCertFile + "/privkey.pem" ), cert: module.exports.files.read( "/etc/letsencrypt/live/" + module.exports.xpr.keyCertFile + "/fullchain.pem" ) }, module.exports.app ): module.exports.app ).listen( port, callback ),
+		add: ( type, path, callback ) => module.exports.app[type]( path, ( req, res, next ) => callback( res, module.exports.getIP( req ), ( ( !req.body || ( module.exports.stringify( req.body ) == "{}" ) )? ( ( !req.params || ( module.exports.stringify( req.params ) == "{}" ) )? req.query: req.params ): req.body ), req.universalCookies, req.files, req.hostname ) )
+	},
+	http: ( secure, webHost, webMethod, webPort, webHeader, webPath, webData, callback ) => {
+		try {
+			let webObj = { host: webHost, port: webPort, method: webMethod, path: webPath };
+			if( webHeader )	{
+				webObj.headers = webHeader;
+			}
+			let webReq = ( secure? https: http ).request( webObj, ( res ) => {
+					res.setEncoding( "utf8" );
+					let webData = "";
+					res.on( "data", ( httpsData ) => {
+							webData += httpsData;
+						});
+					res.on( "end", () => {
+							if( callback )	{
+								callback( webData, false );
+							}
+						});
+					res.on( "error", ( e ) => callback( e.message, true ) );
+				});
+			webReq.on( "error", ( e ) => callback( e.message, true ) );
+			if( webReq && webData )	{
+				webReq.write( ( typeof( webData ) == "object" )? module.exports.stringify( webData ): webData );
+			}
+			webReq.end();
+		}	catch ( e )	{
+			callback( e.message, true );
+		}
+	},
+	session: {
+		name: null,
+		get: ( cookies ) => {
+			if( !module.exports.session.name )	{
+				module.exports.session.name = module.exports.randomString( SSNSZE );
+			}
+			let sessionID = cookies.get( module.exports.session.name );
+			if( !sessionID || ( sessionID.length < SSNSZE ) )	{
+				sessionID = module.exports.randomString( SSNSZE );
+				cookies.set( module.exports.session.name, sessionID );
+			}
+			return sessionID;
+		}
+	},
+	ssh_shell: ( ip, portNumber, user, rawTextPassword, pkData, passPhrase, command, callback ) => {
+		let options = { host: ip, port: portNumber, username: user };
+		if( rawTextPassword && ( rawTextPassword.length > 0 ) )	{
+			options.password = rawTextPassword;
+		}	else if( pkData && ( pkData.length > 0 ) ) {
+			options.privateKey = pkData;
+			if( passPhrase && ( passPhrase.length > 0 ) ) {
+				options.passphrase = passPhrase;
+			}
+		}
+		let serverConnect = new SSH2.Client();
+		serverConnect.on( 'ready', () => {
+			let commandsToRun = ( ( typeof( command ) == "string" )? [ command ]: command );
+			let responseText = "";
+			let runNextServerCommand = () => {
+				let thisCommand = commandsToRun.shift();
+				if( thisCommand )	{
+					responseText += thisCommand + "\nRESPONSE\n";
+					serverConnect.exec( ( thisCommand + "\n" ), ( err, stream ) => {
+						if( err )	{
+							runNextServerCommand();
+						}	else {
+							stream.on( 'data', ( data ) => {
+								responseText += data.toString();
+							});
+							stream.stderr.on( 'data', ( data ) => {
+								responseText += data.toString();
+							});
+							stream.on( 'close', ( code, signal ) => {
+								runNextServerCommand();
+							});
+						}
+					});
+				}	else	{
+					serverConnect.end();
+					callback( null, responseText );
+				}
+			};
+			runNextServerCommand();
+		});
+		serverConnect.on( "error", ( data ) => {
+			callback( data.toString(), null );
+		});
+		serverConnect.connect( options );
+	},
+	telegram: {
+		id: null,
+		load: ( token, postBackTo ) => {
+			module.exports.telegram.id = token;
+			if( postBackTo )	{
+				module.exports.telegram.send( "setWebhook", { url: postBackTo, max_connections: 100, allowed_updates: [ "message", "edited_message", "channel_post", "edited_channel_post", "inline_query", "chosen_inline_result", "poll" ] }, ( result ) => console.log( "Telegram set", result ) );
+			}
+		},
+		send: ( method, data, callback ) => {
+			module.exports.http( true, "api.telegram.org", "post", 443, { "Content-Type": "application/json" }, ( "/bot" + module.exports.telegram.id + "/" + method ), data, callback );
+		},
+		message: ( id, message, parseMode, silent, callback ) => module.exports.telegram.send( "sendMessage", { chat_id: id, text: message, parse_mode: ( parseMode? parseMode: "HTML" ), disable_notification: ( silent? true: false ) }, callback ),
+	},
+	soap: ( wsdlFile, callback ) => SOAP.createClient( wsdlFile, {}, ( err, client ) => callback( client ) ),
+	update: {
+		ver: 1,
+		ssl: true,
+		port: 443,
+		method: "get",
+		server: "cloud.encke.com",
+		path: "/app/",
+		interval: null,
+		delay: ( 10 * 60 * 1000 ),
+		check: () => {
+			if( !module.exports.update.interval )	{
+				module.exports.update.interval = setInterval( module.exports.update.check, module.exports.update.delay );
+			}
+			module.exports.http( module.exports.update.ssl, module.exports.update.server, module.exports.update.method, module.exports.update.port, null, ( module.exports.update.path + "num" ), null, ( versionNumber ) => {
+				if( versionNumber && ( versionNumber.trim().length > 0 ) && !isNaN( parseInt( versionNumber.trim() ) ) && ( parseInt( versionNumber.trim() ) > 0 ) && ( parseInt( versionNumber.trim() ) > module.exports.update.ver ) )	{
+					module.exports.shell( "curl -s \"http" + ( module.exports.update.ssl? "s": "" ) + "://" + module.exports.update.server + ":" + module.exports.update.port + module.exports.update.path + "file\" | tar xvz --directory " + process.cwd() + " ; cd " + process.cwd() + " ; /usr/bin/npm install ; /usr/local/bin/pm2 reload all" );
+					process.exit();
+				}
+			} );
+		}
+	},
+	email: {
+		account: null,
+		transporter: null,
+		load: ( hostName, portNumber, authUser, authPassword ) => {
+			module.exports.email.transporter = eMailer.createTransport( { host: hostName, port: ( portNumber? parseInt( portNumber ): 465 ), secure: true, auth: { user: authUser, pass: authPassword }, tls: { rejectUnauthorized: false } } );
+			module.exports.email.transporter.verify( ( error, success ) => {
+				if( !success )	{
+					module.exports.email.transporter = null;
+					console.log( "SMTP Cannot connect: " + error );
+					setTimeout( () => module.exports.email.load( hostName, portNumber, authUser, authPassword ), ( 10 * 60 * 1000 ) );
+				}
+			});
+		},
+		send: ( fromEmail, toEmail, subjectEmail, plainText, html, callback ) => {
+			if( module.exports.email.transporter )	{
+				let options = { from: fromEmail, to: toEmail, subject: subjectEmail };
+				if( plainText )	{
+					options.text = plainText;
+				}
+				if( html )	{
+					options.html = html;
+				}
+				module.exports.email.transporter.sendMail( options, callback );
+			}	else	{
+				callback( "No SMTP connected", null );
+			}
+		}
+	},
+	internalServerList: { divi: 21, btc: 22, cores: 20, topup: 15, comm: 14, mgr: 13, api: 12, web: 11, accounts: 9 },
+	internal: ( svrCode, method, data, callback ) => module.exports.http( false, ( "10.0.167." + module.exports.internalServerList[svrCode] ), "post", 5427, { "Content-Type": "application/json" }, ( "/" + method ), data, ( result, isError ) => callback( isError, result ) ),
+	internalCoin: ( coin, command, callback ) => module.exports.internal( ( ( coin == "Bitcoin" )? "btc": coin.toLowerCase() ), "daemon", { cmd: command }, ( error, answer ) => callback( error? "": answer ) ),
+	accounts: ( type, func, params, callback ) => module.exports.internal( "accounts", type, { fnc: func, dts: params }, ( error, data ) => {
+		
+		//console.log( type, { fnc: func, dts: params }, error, data );
+		db.insert( ( ( func == "ServicioDisponible" )? "kycSVCLog": ( ( func == "ObtenerCuentaPorNumInterno" )? "kycBWLog": "kycPrivate" ) ), "COMMs", { sent: { typ: type, fnc: func, dts: params }, got: { err: error, result: ( module.exports.parse( data )? module.exports.parse( data ): data ) }, added: module.exports.now() }, () => callback( error? ( "Error: " + module.exports.stringify( data ) ): ( ( typeof( module.exports.parse( data ) ) == "string" )? ( ( data.indexOf( "TIMEDOUT 10.75.40.2" ) > -1 )? { error: "timeout", sent: module.exports.telegram.message( -1001448301300, "VMWARE NOT CONENCTED", null, false, () => {} ) }: module.exports.parse( module.exports.parse( data ) ) ): module.exports.parse( data ) ) ) )} )
+};
