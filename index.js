@@ -195,11 +195,7 @@ module.exports = {
 		copy: ( sourceFile, destFile ) => fs.copyFileSync( sourceFile, destFile ),
 		untar: ( fileName, extractTo ) => fs.createReadStream( fileName ).pipe( gunzip() ).pipe( tar.extract( extractTo ) )
 	},
-	getIPData: ( ip, callback ) => {
-		module.exports.http( true, "ipfind.co", "GET", 443, null, ( "/?ip=" + ip + "&auth=60bb060e-9601-412e-8a49-891cf1c1402f" ), null, ( webData ) => {
-				callback( module.exports.parse( webData ) );
-			});
-	},
+	getIPData: ( ip, callback ) => module.exports.http( true, "ipfind.co", "GET", 443, null, ( "/?ip=" + ip + "&auth=60bb060e-9601-412e-8a49-891cf1c1402f" ), null, ( webData ) => callback( module.exports.parse( webData ) ) ),
 	getIP: ( req ) => {
 		let thisIP = ( req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.socket.remoteAddress
 			|| ( req.connection.socket? req.connection.socket.remoteAddress: null ) );
@@ -222,7 +218,6 @@ module.exports = {
 			module.exports.app.use( cors() );
 			module.exports.app.use( cookiesMiddleware() );
 			module.exports.app.use( fileUpload() );
-			module.exports.app.use( module.exports.oauth2.inject() );
 		},
 		start: ( port, callback ) => ( module.exports.xpr.keyCertFile? https.createServer( { key: module.exports.files.read( "/etc/letsencrypt/live/" + module.exports.xpr.keyCertFile + "/privkey.pem" ), cert: module.exports.files.read( "/etc/letsencrypt/live/" + module.exports.xpr.keyCertFile + "/fullchain.pem" ) }, module.exports.app ): module.exports.app ).listen( port, callback ),
 		add: ( type, path, callback ) => module.exports.app[type]( path, ( req, res, next ) => callback( res, module.exports.getIP( req ), ( ( !req.body || ( module.exports.stringify( req.body ) == "{}" ) )? ( ( !req.params || ( module.exports.stringify( req.params ) == "{}" ) )? req.query: req.params ): req.body ), req.universalCookies, req.files, req.hostname ) )
@@ -234,18 +229,12 @@ module.exports = {
 				webObj.headers = webHeader;
 			}
 			let webReq = ( secure? https: http ).request( webObj, ( res ) => {
-					res.setEncoding( "utf8" );
-					let webData = "";
-					res.on( "data", ( httpsData ) => {
-							webData += httpsData;
-						});
-					res.on( "end", () => {
-							if( callback )	{
-								callback( webData, false );
-							}
-						});
-					res.on( "error", ( e ) => callback( e.message, true ) );
-				});
+				res.setEncoding( "utf8" );
+				let webData = "";
+				res.on( "data", ( httpsData ) => { webData += httpsData; } );
+				res.on( "end", () => callback( webData, false ) );
+				res.on( "error", ( e ) => callback( e.message, true ) );
+			});
 			webReq.on( "error", ( e ) => callback( e.message, true ) );
 			if( webReq && webData )	{
 				webReq.write( ( typeof( webData ) == "object" )? module.exports.stringify( webData ): webData );
@@ -309,9 +298,7 @@ module.exports = {
 			};
 			runNextServerCommand();
 		});
-		serverConnect.on( "error", ( data ) => {
-			callback( data.toString(), null );
-		});
+		serverConnect.on( "error", ( data ) => callback( data.toString(), null ) );
 		serverConnect.connect( options );
 	},
 	telegram: {
@@ -322,9 +309,7 @@ module.exports = {
 				module.exports.telegram.send( "setWebhook", { url: postBackTo, max_connections: 100, allowed_updates: [ "message", "edited_message", "channel_post", "edited_channel_post", "inline_query", "chosen_inline_result", "poll" ] }, ( result ) => console.log( "Telegram set", result ) );
 			}
 		},
-		send: ( method, data, callback ) => {
-			module.exports.http( true, "api.telegram.org", "post", 443, { "Content-Type": "application/json" }, ( "/bot" + module.exports.telegram.id + "/" + method ), data, callback );
-		},
+		send: ( method, data, callback ) => module.exports.http( true, "api.telegram.org", "post", 443, { "Content-Type": "application/json" }, ( "/bot" + module.exports.telegram.id + "/" + method ), data, callback ),
 		message: ( id, message, parseMode, silent, callback ) => module.exports.telegram.send( "sendMessage", { chat_id: id, text: message, parse_mode: ( parseMode? parseMode: "HTML" ), disable_notification: ( silent? true: false ) }, callback ),
 	},
 	soap: ( wsdlFile, callback ) => SOAP.createClient( wsdlFile, {}, ( err, client ) => callback( client ) ),
@@ -376,12 +361,5 @@ module.exports = {
 				callback( "No SMTP connected", null );
 			}
 		}
-	},
-	internalServerList: { divi: 21, btc: 22, cores: 20, topup: 15, comm: 14, mgr: 13, api: 12, web: 11, accounts: 9 },
-	internal: ( svrCode, method, data, callback ) => module.exports.http( false, ( "10.0.167." + module.exports.internalServerList[svrCode] ), "post", 5427, { "Content-Type": "application/json" }, ( "/" + method ), data, ( result, isError ) => callback( isError, result ) ),
-	internalCoin: ( coin, command, callback ) => module.exports.internal( ( ( coin == "Bitcoin" )? "btc": coin.toLowerCase() ), "daemon", { cmd: command }, ( error, answer ) => callback( error? "": answer ) ),
-	accounts: ( type, func, params, callback ) => module.exports.internal( "accounts", type, { fnc: func, dts: params }, ( error, data ) => {
-		
-		//console.log( type, { fnc: func, dts: params }, error, data );
-		db.insert( ( ( func == "ServicioDisponible" )? "kycSVCLog": ( ( func == "ObtenerCuentaPorNumInterno" )? "kycBWLog": "kycPrivate" ) ), "COMMs", { sent: { typ: type, fnc: func, dts: params }, got: { err: error, result: ( module.exports.parse( data )? module.exports.parse( data ): data ) }, added: module.exports.now() }, () => callback( error? ( "Error: " + module.exports.stringify( data ) ): ( ( typeof( module.exports.parse( data ) ) == "string" )? ( ( data.indexOf( "TIMEDOUT 10.75.40.2" ) > -1 )? { error: "timeout", sent: module.exports.telegram.message( -1001448301300, "VMWARE NOT CONENCTED", null, false, () => {} ) }: module.exports.parse( module.exports.parse( data ) ) ): module.exports.parse( data ) ) ) )} )
+	}
 };
