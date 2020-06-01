@@ -1,6 +1,6 @@
 {
   "name": "nk-node",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "NK Node.js Library System",
   "main": "index.js",
   "scripts": {
@@ -17,6 +17,7 @@
   },
   "homepage": "https://github.com/Encke/NK-Node#readme",
   "dependencies": {
+    "bcrypt": "^4.0.1",
     "child_process": "^1.0.2",
     "cors": "^2.8.5",
     "express": "^4.17.1",
