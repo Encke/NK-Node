@@ -220,7 +220,16 @@ module.exports = {
 			module.exports.app.use( fileUpload() );
 		},
 		start: ( port, callback ) => ( module.exports.xpr.keyCertFile? https.createServer( { key: module.exports.files.read( "/etc/letsencrypt/live/" + module.exports.xpr.keyCertFile + "/privkey.pem" ), cert: module.exports.files.read( "/etc/letsencrypt/live/" + module.exports.xpr.keyCertFile + "/fullchain.pem" ) }, module.exports.app ): module.exports.app ).listen( port, callback ),
-		add: ( type, path, callback ) => module.exports.app[type]( path, ( req, res, next ) => callback( res, module.exports.getIP( req ), ( ( !req.body || ( module.exports.stringify( req.body ) == "{}" ) )? ( ( !req.params || ( module.exports.stringify( req.params ) == "{}" ) )? req.query: req.params ): req.body ), req.universalCookies, req.files, req.hostname ) )
+		add: ( type, path, callback, sessionCheck ) => {
+			if( sessionCheck )	{
+				module.exports.app[type]( path, ( req, res, next ) => sessionCheck( ( ( req.headers.authorization && sessionCheck )? req.headers.authorization.replace( "bearer ", "" ): "" ), ( session ) => {
+					console.log("session", session);
+					callback( res, module.exports.getIP( req ), ( ( !req.body || ( module.exports.stringify( req.body ) == "{}" ) )? ( ( !req.params || ( module.exports.stringify( req.params ) == "{}" ) )? req.query: req.params ): req.body ), session, req.files, req.hostname );
+				}));
+			}	else {
+				module.exports.app[type]( path, ( req, res, next ) => callback( res, module.exports.getIP( req ), ( ( !req.body || ( module.exports.stringify( req.body ) == "{}" ) )? ( ( !req.params || ( module.exports.stringify( req.params ) == "{}" ) )? req.query: req.params ): req.body ), req.universalCookies, req.files, req.hostname ) );
+			}
+		}
 	},
 	http: ( secure, webHost, webMethod, webPort, webHeader, webPath, webData, callback ) => {
 		try {
