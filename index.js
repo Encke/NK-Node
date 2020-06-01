@@ -1,6 +1,6 @@
 const path					= require( 'path' );
 const { execSync }			= require( 'child_process' );
-const bcrypt				= require( 'bcrypt' );
+const bcrypt				= require( 'bcryptjs' );
 const cors					= require( 'cors' );
 const cookiesMiddleware		= require( 'universal-cookie-express' );
 const crypto				= require( 'crypto' );
@@ -130,7 +130,7 @@ module.exports = {
 	md5: ( value ) => {
 		return module.exports.crypto.createHash( "md5" ).update( value ).digest( "hex" );
 	},
-	bcryptCreate: ( plainTextPassword, saltRounds, callback ) => bcrypt.hash( plainTextPassword, ( saltRounds? saltRounds: 10 ), ( err, hash ) => callback( hash ) ),
+	bcryptCreate: ( plainTextPassword, saltRounds, callback ) => bcrypt.genSalt( ( saltRounds? saltRounds: 10 ), ( err, salt ) => bcrypt.hash( plainTextPassword, salt, ( err, hash ) => callback( hash ) ) ),
 	bcryptCompare: ( plainTextPassword, encryptedPassword, callback ) => bcrypt.compare( plainTextPassword, encryptedPassword.replace( '$2y$', '$2a$' ), ( err, correct ) => callback( correct ) ),
 	isoDatetime: ( start ) => {
 		let thisDateString = "";
