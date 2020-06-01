@@ -226,7 +226,6 @@ module.exports = {
 		add: ( type, path, callback, sessionCheck ) => {
 			if( sessionCheck )	{
 				module.exports.app[type]( path, ( req, res, next ) => sessionCheck( ( ( req.headers.authorization && sessionCheck )? req.headers.authorization.replace( "bearer ", "" ): "" ), ( session ) => {
-					console.log("session", session);
 					callback( res, module.exports.getIP( req ), ( ( !req.body || ( module.exports.stringify( req.body ) == "{}" ) )? ( ( !req.params || ( module.exports.stringify( req.params ) == "{}" ) )? req.query: req.params ): req.body ), session, req.files, req.hostname );
 				}));
 			}	else {
