@@ -128,9 +128,6 @@ let mongoDBJSObject = {
 				let lookupdata = [];
 				for( let i = 0; i < joins.length; i++ )	{
 					let lookupDataItem = { from: joins[i].from, localField: joins[i].field, foreignField: joins[i].fromField, as: joins[i].name };
-					if( joins[i].query )	{
-						lookupDataItem.let = { $match: joins[i].query };
-					}
 					lookupdata.push( { $lookup: lookupDataItem } );
 				}
 				lookupdata.push( { $match: query } )
