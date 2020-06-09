@@ -382,7 +382,7 @@ module.exports = {
 		let sslCertData = null;
 		let process = ( req, res, next ) => {
 			try	{
-				console.log( module.exports.shell( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo ) );
+				console.log( module.exports.shell( "/bin/sh " + __dirname + "/gitDeploy.sh " + deployTo ) );
 			}	catch( e )	{
 				console.log(e)
 			}
