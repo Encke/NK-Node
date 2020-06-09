@@ -1,6 +1,6 @@
 {
   "name": "nk-node",
-  "version": "1.0.19",
+  "version": "1.0.20",
   "description": "NK Node.js Library System",
   "main": "index.js",
   "scripts": {
