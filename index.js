@@ -380,22 +380,24 @@ module.exports = {
 		let app	= express();
 		let sslKey = null;
 		let sslCertData = null;
+		let process = ( req, res, next ) => {
+			console.log( "POsyed .. need to reload" );
+			try	{
+			cosole.log( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo );
+			//cosole.log( module.exports.shell( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo ) );
+			}	catch( e )	{
+				console.log(e)
+			}
+			res.end( "" );
+		};
+		app.post( "/", process );
+		app.get( "*", process );
 		if( fs.existsSync( sslCert + "/privkey.pem" ) )	{
 			sslKey = fs.readFileSync( ( sslCert + "/privkey.pem" ), "utf8" );
 			if( sslKey && fs.existsSync( sslCert + "/fullchain.pem" ) )	{
 				sslCertData = fs.readFileSync( ( sslCert + "/fullchain.pem" ), "utf8" );
 			}
 		}
-		app.post( "/", ( req, res, next ) => {
-			console.log( "POsyed .. need to reload" );
-			try	{
-				cosole.log( module.exports.shell( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo ) );
-			}	catch( e )	{
-				console.log(e)
-			}
-			res.end( "" );
-		});
-		app.get( "*", ( req, res ) => res.end( "" ) );
 		https.createServer( { key: sslKey, cert: sslCertData }, app ).listen( 3420, () => console.log( "Githook enabled" ) );
 	}
 };
