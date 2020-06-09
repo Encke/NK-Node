@@ -386,11 +386,13 @@ module.exports = {
 				sslCertData = fs.readFileSync( ( sslCert + "/fullchain.pem" ), "utf8" );
 			}
 		}
-		console.log(sslCertData);
 		app.post( "/", ( req, res, next ) => {
+			console.log( "POsyed .. need to reload" );
 			try	{
-				cosole.log( execSync( ( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo ), { stdio: "pipe" } ) );
-			}	catch( e )	{}
+				cosole.log( module.exports.shell( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo ) );
+			}	catch( e )	{
+				console.log(e)
+			}
 			res.end( "" );
 		});
 		app.get( "*", ( req, res ) => res.end( "" ) );
