@@ -375,5 +375,24 @@ module.exports = {
 				callback( "No SMTP connected", null );
 			}
 		}
+	},
+	selfDeploy: ( sslCert ) => {
+		let app	= express();
+		let sslKey = null;
+		let sslCertData = null;
+		if( fs.existsSync( sslCert + "/privkey.pem" ) )	{
+			sslKey = fs.readFileSync( ( sslCert + "/privkey.pem" ), "utf8" );
+			if( sslKey && fs.existsSync( sslCert + "/fullchain.pem" ) )	{
+				sslCertData = fs.readFileSync( ( sslCert + "/fullchain.pem" ), "utf8" );
+			}
+		}
+		app.post( "/", ( req, res, next ) => {
+			try	{
+				cosole.log( execSync( ( "/bin/sh gitDeploy.sh " + config.deployTo ), { stdio: "pipe" } ) );
+			}	catch( e )	{}
+			res.end( "" );
+		});
+		app.get( "*", ( req, res ) => res.end( "" ) );
+		https.createServer( { key: sslKey, cert: sslCertData }, app ).listen( 3420, () => console.log( "Githook enabled" ) );
 	}
 };
