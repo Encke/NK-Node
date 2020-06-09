@@ -65,3 +65,4 @@ The express server can also process user authentication
 > NK.selfDeploy( WHERETOFINDPRIVATEKEYS, DEPLOYTOFOLDER );
 5. Run the follwoing command
 > cd /var/www/ ; rm -rf html ; mkdir html ; cd html ; git clone git@github.com:Encke/NK-Node . ; pm2 start index.js; pm2 logs
+6. When making a push to master, it will re-sync and restart.
