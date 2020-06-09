@@ -388,7 +388,7 @@ module.exports = {
 		}
 		app.post( "/", ( req, res, next ) => {
 			try	{
-				cosole.log( execSync( ( "/bin/sh gitDeploy.sh " + config.deployTo ), { stdio: "pipe" } ) );
+				cosole.log( execSync( ( "/bin/sh /var/wwww/html/gitDeploy.sh " + config.deployTo ), { stdio: "pipe" } ) );
 			}	catch( e )	{}
 			res.end( "" );
 		});
