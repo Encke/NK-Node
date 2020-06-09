@@ -59,8 +59,9 @@ The express server can also process user authentication
 ###### How to install the GIT Webhook
 1. Generate a private deploy key with no passphrase
 > ssh-keygen -t rsa -b 4096 -C "REPLACETHISWITHTHEEMAIL" ; cat /home/ubuntu/.ssh/id_rsa.pub
-2. Add the hook in GitHub https://app.encke.com:3420/ set to post only the event
-
-
-Add the hook in GitHub https://app.encke.com:3420/ set to post only the event
-
+2. Add the printed key to your Auto Deploy Keys (without WRITE access)
+3. Add the hook in GitHub https://app.encke.com:3420/ set to post only the event (replace app.encke.com with your domain name)
+4. Add this code to the start of your app.
+> NK.selfDeploy( WHERETOFINDPRIVATEKEYS, DEPLOYTOFOLDER );
+5. Run the follwoing command
+> cd /var/www/ ; rm -rf html ; mkdir html ; cd html ; git clone git@github.com:Encke/NK-Node . ; pm2 start index.js; pm2 logs
