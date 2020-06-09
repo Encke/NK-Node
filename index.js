@@ -381,10 +381,8 @@ module.exports = {
 		let sslKey = null;
 		let sslCertData = null;
 		let process = ( req, res, next ) => {
-			console.log( "POsyed .. need to reload" );
 			try	{
-			cosole.log( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo );
-			//cosole.log( module.exports.shell( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo ) );
+				cosole.log( module.exports.shell( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo ) );
 			}	catch( e )	{
 				console.log(e)
 			}
