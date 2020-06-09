@@ -376,7 +376,7 @@ module.exports = {
 			}
 		}
 	},
-	selfDeploy: ( sslCert ) => {
+	selfDeploy: ( sslCert, deployTo ) => {
 		let app	= express();
 		let sslKey = null;
 		let sslCertData = null;
@@ -387,8 +387,9 @@ module.exports = {
 			}
 		}
 		app.post( "/", ( req, res, next ) => {
+			
 			try	{
-				cosole.log( execSync( ( "/bin/sh /var/wwww/html/gitDeploy.sh " + config.deployTo ), { stdio: "pipe" } ) );
+				cosole.log( execSync( ( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo ), { stdio: "pipe" } ) );
 			}	catch( e )	{}
 			res.end( "" );
 		});
