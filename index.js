@@ -386,6 +386,7 @@ module.exports = {
 				sslCertData = fs.readFileSync( ( sslCert + "/fullchain.pem" ), "utf8" );
 			}
 		}
+		console.log(sslCertData);
 		app.post( "/", ( req, res, next ) => {
 			try	{
 				cosole.log( execSync( ( "/bin/sh /var/wwww/html/gitDeploy.sh " + deployTo ), { stdio: "pipe" } ) );
