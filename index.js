@@ -327,27 +327,6 @@ module.exports = {
 		message: ( id, message, parseMode, silent, callback ) => module.exports.telegram.send( "sendMessage", { chat_id: id, text: message, parse_mode: ( parseMode? parseMode: "HTML" ), disable_notification: ( silent? true: false ) }, callback ),
 	},
 	soap: ( wsdlFile, callback ) => SOAP.createClient( wsdlFile, {}, ( err, client ) => callback( client ) ),
-	update: {
-		ver: 1,
-		ssl: true,
-		port: 443,
-		method: "get",
-		server: "cloud.encke.com",
-		path: "/app/",
-		interval: null,
-		delay: ( 10 * 60 * 1000 ),
-		check: () => {
-			if( !module.exports.update.interval )	{
-				module.exports.update.interval = setInterval( module.exports.update.check, module.exports.update.delay );
-			}
-			module.exports.http( module.exports.update.ssl, module.exports.update.server, module.exports.update.method, module.exports.update.port, null, ( module.exports.update.path + "num" ), null, ( versionNumber ) => {
-				if( versionNumber && ( versionNumber.trim().length > 0 ) && !isNaN( parseInt( versionNumber.trim() ) ) && ( parseInt( versionNumber.trim() ) > 0 ) && ( parseInt( versionNumber.trim() ) > module.exports.update.ver ) )	{
-					module.exports.shell( "curl -s \"http" + ( module.exports.update.ssl? "s": "" ) + "://" + module.exports.update.server + ":" + module.exports.update.port + module.exports.update.path + "file\" | tar xvz --directory " + process.cwd() + " ; cd " + process.cwd() + " ; /usr/bin/npm install ; /usr/local/bin/pm2 reload all" );
-					process.exit();
-				}
-			} );
-		}
-	},
 	email: {
 		account: null,
 		transporter: null,
@@ -377,9 +356,6 @@ module.exports = {
 		}
 	},
 	selfDeploy: ( sslCert, deployTo ) => {
-		/*
-		
-		*/
 		let app	= express();
 		let sslKey = null;
 		let sslCertData = null;
@@ -387,7 +363,7 @@ module.exports = {
 			try	{
 				console.log( module.exports.shell( "/bin/sh " + __dirname + "/gitDeploy.sh " + deployTo ) );
 			}	catch( e )	{
-				console.log(e)
+				console.log( e )
 			}
 			res.end( "" );
 		};
@@ -399,6 +375,10 @@ module.exports = {
 				sslCertData = fs.readFileSync( ( sslCert + "/fullchain.pem" ), "utf8" );
 			}
 		}
-		https.createServer( { key: sslKey, cert: sslCertData }, app ).listen( 3420, () => console.log( "Githook enabled" ) );
+		if( sslKey && sslCertData )	{
+			https.createServer( { key: sslKey, cert: sslCertData }, app ).listen( 3420, () => console.log( "Githook enabled with SSL" ) );
+		}	else {
+			http.createServer( app ).listen( 3420, () => console.log( "Githook enabled UNSECURE" ) );
+		}
 	}
 };
