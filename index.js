@@ -28,14 +28,10 @@ module.exports = {
 		if( telegramToken )	{
 			module.exports.telegram.load( telegramToken, telegramURL );
 		}
-		let databaseLoaded = () => {
-			module.exports.update.check();
-			callback();
-		};
 		if( databaseName )	{
-			db.start( databaseName, "127.0.0.1", 27017, databaseLoaded );
+			db.start( databaseName, "127.0.0.1", 27017, callback );
 		}	else	{
-			databaseLoaded();
+			callback();
 		}
 	},
 	shell: ( command ) => {
