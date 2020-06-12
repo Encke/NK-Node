@@ -351,7 +351,7 @@ module.exports = {
 			}
 		}
 	},
-	selfDeploy: ( sslCert, deployTo ) => {
+	selfDeploy: ( sslCert, deployTo, callback ) => {
 		let app	= express();
 		let sslKey = null;
 		let sslCertData = null;
@@ -372,9 +372,19 @@ module.exports = {
 			}
 		}
 		if( sslKey && sslCertData )	{
-			https.createServer( { key: sslKey, cert: sslCertData }, app ).listen( 3420, () => console.log( "Githook enabled with SSL" ) );
+			https.createServer( { key: sslKey, cert: sslCertData }, app ).listen( 3420, () => {
+				console.log( "Githook enabled with SSL" );
+				if( callback )	{
+					callback();
+				}
+			});
 		}	else {
-			http.createServer( app ).listen( 3420, () => console.log( "Githook enabled UNSECURE" ) );
+			http.createServer( app ).listen( 3420, () => {
+				console.log( "Githook enabled UNSECURE" );
+				if( callback )	{
+					callback();
+				}
+			});
 		}
 	}
 };
