@@ -198,7 +198,7 @@ module.exports = {
 	getIP: ( req ) => {
 		let thisIP = ( req.headers["x-forwarded-for"] || req.connection.remoteAddress || req.socket.remoteAddress
 			|| ( req.connection.socket? req.connection.socket.remoteAddress: null ) );
-		return ( ( ( thisIP.substr( 0, 7 ) == "::ffff:" ) && module.exports.checkIP( thisIP.substr( 7 ) ) )? thisIP.substr( 7 ): thisIP );
+		return ( ( ( thisIP && ( thisIP.substr( 0, 7 ) == "::ffff:" ) ) && module.exports.checkIP( thisIP.substr( 7 ) ) )? thisIP.substr( 7 ): thisIP );
 	},
 	checkIP: ( ip ) => {
 		return /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test( ip );
