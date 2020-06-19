@@ -4,7 +4,6 @@ const bcrypt				= require( 'bcryptjs' );
 const cors					= require( 'cors' );
 const cookiesMiddleware		= require( 'universal-cookie-express' );
 const crypto				= require( 'crypto' );
-const db					= require( './mongo' );
 const express				= require( 'express' );
 const fs					= require( 'fs' );
 const http					= require( 'http' );
@@ -21,15 +20,18 @@ const DIVI_FEE_MAX			= 100;
 const SSNSZE				= 64;
 
 module.exports = {
-	db: db,
+	db: null,
 	qS: qS,
 	crypto: crypto,
 	app: null,
-	start: ( databaseName, telegramToken, telegramURL, callback ) => {
+	start: ( loadMongo, databaseName, telegramToken, telegramURL, callback ) => {
+		if( loadMongo )	{
+			module.exports.db = require( './mongo' );
+		}
 		if( telegramToken )	{
 			module.exports.telegram.load( telegramToken, telegramURL );
 		}
-		if( databaseName )	{
+		if( loadMongo && databaseName )	{
 			db.start( databaseName, "127.0.0.1", 27017, callback );
 		}	else	{
 			callback();
