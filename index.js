@@ -22,6 +22,7 @@ const SSNSZE				= 64;
 
 module.exports = {
 	db: db,
+	qS: qS,
 	crypto: crypto,
 	app: null,
 	start: ( databaseName, telegramToken, telegramURL, callback ) => {
