@@ -18,12 +18,24 @@ const DIVI_FEE_PERCENT		= 0.0001;
 const DIVI_MINIMUM			= 0.1;
 const DIVI_FEE_MAX			= 100;
 const SSNSZE				= 64;
+const TIME_SECOND	= 1000;
+const TIME_MINUTE	= ( 60 * TIME_SECOND );
+const TIME_HOUR		= ( 60 * TIME_MINUTE );
+const TIME_DAY		= ( 24 * TIME_HOUR );
+const TIME_WEEK		= ( 7 * TIME_DAY );
+const TIME_MONTH	= ( 30 * TIME_DAY );
 
 module.exports = {
 	db: null,
 	qS: qS,
 	crypto: crypto,
 	app: null,
+	TIME: { SECOND: TIME_SECOND,
+			MINUTE: TIME_MINUTE, 
+			HOUR: TIME_HOUR, 
+			DAY: TIME_DAY, 
+			WEEK: TIME_WEEK, 
+			MONTH: TIME_MONTH },
 	start: ( loadMongo, databaseName, telegramToken, telegramURL, callback ) => {
 		if( loadMongo )	{
 			module.exports.db = require( './mongo' );
