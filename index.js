@@ -401,5 +401,26 @@ module.exports = {
 				}
 			});
 		}
+	},
+	decodeBase64Image: ( dataString ) => {
+		let matches = dataString.match( /^data:([A-Za-z-+\/]+);base64,(.+)$/ );
+		let imageResponse = {};
+		if( matches.length !== 3 )	{
+			return 'Invalid input string';
+		}
+		imageResponse.type = matches[1];
+		imageResponse.data = new Buffer( matches[2], 'base64' );
+		return imageResponse;
+	},
+	base64SaveToFile: ( rawDataString, uploadToDirectory ) => {
+		try	{
+			let imageBuffer = module.exports.decodeBase64Image( rawDataString );
+			let imageTypeDetected = imageBuffer.type.match( /\/(.*?)$/ );
+			let newFile = ( module.exports.randomString( 25 ) + "." + imageTypeDetected[1] );
+			module.exports.files.write( ( uploadToDirectory + newFile ), imageBuffer.data );
+			return [ null, newFile ];
+		} catch( error )	{
+			return [ error, null ];
+		}
 	}
 };
