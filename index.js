@@ -141,6 +141,9 @@ module.exports = {
 	md5: ( value ) => {
 		return module.exports.crypto.createHash( "md5" ).update( value ).digest( "hex" );
 	},
+	sha1: ( value ) => {
+		return module.exports.crypto.createHash( "sha1" ).update( value ).digest( "hex" );
+	},
 	bcryptCreate: ( plainTextPassword, saltRounds, callback ) => bcrypt.genSalt( ( saltRounds? saltRounds: 10 ), ( err, salt ) => bcrypt.hash( plainTextPassword, salt, ( err, hash ) => callback( hash ) ) ),
 	bcryptCompare: ( plainTextPassword, encryptedPassword, callback ) => bcrypt.compare( plainTextPassword, encryptedPassword.replace( '$2y$', '$2a$' ), ( err, correct ) => callback( correct ) ),
 	isoDatetime: ( start ) => {
