@@ -366,13 +366,13 @@ module.exports = {
 			}
 		}
 	},
-	selfDeploy: ( sslCert, deployTo, callback ) => {
+	selfDeploy: ( sslCert, deployTo, pm2ProcessNumber, callback ) => {
 		let app	= express();
 		let sslKey = null;
 		let sslCertData = null;
 		let process = ( req, res, next ) => {
 			try	{
-				console.log( module.exports.shell( "/bin/sh " + __dirname + "/gitDeploy.sh " + deployTo ) );
+				console.log( module.exports.shell( "/bin/sh " + __dirname + "/gitDeploy.sh " + deployTo + " " + parseInt( pm2ProcessNumber ).toString() ) );
 			}	catch( e )	{
 				console.log( e )
 			}
