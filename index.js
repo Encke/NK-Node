@@ -44,7 +44,7 @@ module.exports = {
 			module.exports.telegram.load( telegramToken, telegramURL );
 		}
 		if( loadMongo && databaseName )	{
-			db.start( databaseName, "127.0.0.1", 27017, callback );
+			module.exports.db.start( databaseName, "127.0.0.1", 27017, callback );
 		}	else	{
 			callback();
 		}
