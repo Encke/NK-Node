@@ -344,6 +344,7 @@ module.exports = {
 		load: ( hostName, portNumber, authUser, authPassword ) => {
 			module.exports.email.transporter = eMailer.createTransport( { host: hostName, port: ( portNumber? parseInt( portNumber ): 465 ), secure: true, auth: { user: authUser, pass: authPassword }, tls: { rejectUnauthorized: false } } );
 			module.exports.email.transporter.verify( ( error, success ) => {
+				console.log("Email Connection Status", error, success );
 				if( !success )	{
 					module.exports.email.transporter = null;
 					console.log( "SMTP Cannot connect: " + error );
