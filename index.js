@@ -31,10 +31,10 @@ module.exports = {
 	crypto: crypto,
 	app: null,
 	TIME: { SECOND: TIME_SECOND,
-			MINUTE: TIME_MINUTE, 
-			HOUR: TIME_HOUR, 
-			DAY: TIME_DAY, 
-			WEEK: TIME_WEEK, 
+			MINUTE: TIME_MINUTE,
+			HOUR: TIME_HOUR,
+			DAY: TIME_DAY,
+			WEEK: TIME_WEEK,
 			MONTH: TIME_MONTH },
 	start: ( loadMongo, databaseName, telegramToken, telegramURL, callback ) => {
 		if( loadMongo )	{
@@ -240,9 +240,6 @@ module.exports = {
 		add: ( type, path, callback, sessionCheck ) => {
 			if( sessionCheck )	{
 				module.exports.app[type]( path, ( req, res, next ) => sessionCheck( ( ( req.headers.authorization && sessionCheck )? req.headers.authorization.replace( "bearer ", "" ): "" ), ( session ) => {
-					
-					console.log( req.originalUrl );
-					
 					callback( res, module.exports.getIP( req ), ( ( !req.body || ( module.exports.stringify( req.body ) == "{}" ) )? ( ( !req.params || ( module.exports.stringify( req.params ) == "{}" ) )? req.query: req.params ): req.body ), session, req.files, req.hostname );
 				}));
 			}	else {
