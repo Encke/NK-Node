@@ -230,8 +230,8 @@ module.exports = {
 		load: ( keyCertFile ) => {
 			module.exports.xpr.keyCertFile = keyCertFile;
 			module.exports.app = express();
-			module.exports.app.use( express.urlencoded( { extended: false } ) );
-			module.exports.app.use( express.json() );
+			module.exports.app.use( express.urlencoded( { limit: '50mb', extended: false } ) );
+			module.exports.app.use( express.json( { limit: '50mb', extended: false } ) );
 			module.exports.app.use( cors() );
 			module.exports.app.use( cookiesMiddleware() );
 			module.exports.app.use( fileUpload() );
