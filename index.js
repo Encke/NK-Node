@@ -253,6 +253,10 @@ module.exports = {
 			if( webHeader )	{
 				webObj.headers = webHeader;
 			}
+			if( webData.formData )	{
+				webData.formData = webData.formData;
+				webData = null;
+			}
 			let webReq = ( secure? https: http ).request( webObj, ( res ) => {
 				res.setEncoding( "utf8" );
 				let webData = "";
@@ -261,14 +265,7 @@ module.exports = {
 				res.on( "error", ( e ) => callback( e.message, true ) );
 			});
 			webReq.on( "error", ( e ) => callback( e.message, true ) );
-			if( webReq && webData && webData.uploadFile && webData.uploadFileData && webData.uploadFileKey && webData.uploadFileType && webData.uploadFileFields )	{
-				let form = webReq.form();
-				for( let x in webData.uploadFileFields )	{
-					form.append( x, webData.uploadFileFields[x] );
-				}
-				form.append( webData.uploadFileKey, webData.uploadFileData, { filename: webData.uploadFile, contentType: webData.uploadFileType } );
-
-			}	else if( webReq && webData )	{
+			if( webReq && webData )	{
 				webReq.write( ( typeof( webData ) == "object" )? module.exports.stringify( webData ): webData );
 			}
 			webReq.end();
