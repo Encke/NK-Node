@@ -261,7 +261,11 @@ module.exports = {
 				res.on( "error", ( e ) => callback( e.message, true ) );
 			});
 			webReq.on( "error", ( e ) => callback( e.message, true ) );
-			if( webReq && webData )	{
+			if( webReq && webData && webData.uploadFile && webData.uploadFileData && webData.uploadFileKey && webData.uploadFileType )	{
+				let form = webReq.form();
+				form.append( webData.uploadFileKey, webData.uploadFileData, { filename: webData.uploadFile, contentType: webData.uploadFileType } );
+
+			}	else if( webReq && webData )	{
 				webReq.write( ( typeof( webData ) == "object" )? module.exports.stringify( webData ): webData );
 			}
 			webReq.end();
