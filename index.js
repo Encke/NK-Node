@@ -261,8 +261,11 @@ module.exports = {
 				res.on( "error", ( e ) => callback( e.message, true ) );
 			});
 			webReq.on( "error", ( e ) => callback( e.message, true ) );
-			if( webReq && webData && webData.uploadFile && webData.uploadFileData && webData.uploadFileKey && webData.uploadFileType )	{
+			if( webReq && webData && webData.uploadFile && webData.uploadFileData && webData.uploadFileKey && webData.uploadFileType && webData.uploadFileFields )	{
 				let form = webReq.form();
+				for( let x in webData.uploadFileFields )	{
+					form.append( x, webData.uploadFileFields[x] );
+				}
 				form.append( webData.uploadFileKey, webData.uploadFileData, { filename: webData.uploadFile, contentType: webData.uploadFileType } );
 
 			}	else if( webReq && webData )	{
