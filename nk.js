@@ -43,29 +43,6 @@ module.exports = {
 		let cmdResult = module.exports.shell( '/usr/local/bin/' + name.toLowerCase() + '-cli -conf=/var/coins/' + name + '/' + name.toLowerCase() + '.conf -datadir=/var/coins/' + name + '/ ' + command )
 		return ( ( cmdResult.substr( 0, 7 ) == 'error: ' )? cmdResult.substr( 7 ): cmdResult )
 	},
-	coinBal: ( name, addresses ) => {
-		let balance = 0
-		if( name == 'divi' )	{
-			balance = module.exports.parse( module.exports.coin( name, ( 'getaddressbalance \'' + module.exports.stringify( { addresses: ( Array.isArray( addresses )? addresses: [addresses] ) } ) + '\'' ) ) )
-		}	else	{
-			balance = { balance: parseFloat( module.exports.coin( name, ( 'getreceivedbyaddress ' + addresses ) ) * 100000000 ) }
-		}
-		return parseFloat( ( balance? balance.balance / 100000000: 0 ) )
-	},
-	coinRec: ( name, addresses ) => {
-		return parseFloat( module.exports.parse( module.exports.coin( name, ( 'getaddressbalance \'' + module.exports.stringify( { addresses: ( Array.isArray( addresses )? addresses: [addresses] ) } ) + '\'' ) ) ).received / 100000000 )
-	},
-	coinValidate: address => {
-		let valid = false
-		if( address && ( address.length == 34 ) )	{
-			let buf = module.exports.coin( name, ( 'validateaddress ' + address ) )
-			if( buf && ( buf.length > 0 ) )	{
-				let addressData = module.exports.parse( buf )
-				valid = ( addressData && !!addressData.isvalid )
-			}
-		}
-		return valid
-	},
 	now: () => ( new Date() ).getTime(),
 	md5: value => module.exports.crypto.createHash( 'md5' ).update( value ).digest( 'hex' ),
 	sha1: value => module.exports.crypto.createHash( 'sha1' ).update( value ).digest( 'hex' ),
