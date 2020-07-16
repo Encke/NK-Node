@@ -26,6 +26,9 @@ module.exports = {
 			DAY: ( 24 * 60 * 60 * 1000 ),
 			WEEK: ( 7 * 24 * 60 * 60 * 1000 ),
 			MONTH: ( 30 * 7 * 24 * 60 * 60 * 1000 ) },
+	CONTENT_TYPE: { html: { "Content-Type": "text/html" },
+									plain: { "Content-Type": "text/plain" },
+									json: { "Content-Type": "application/json" } },
 	shell: command => {
 		let shellText = ''
 		let shellResult = null
@@ -217,7 +220,7 @@ module.exports = {
 				module.exports.telegram.send( 'setWebhook', { url: postBackTo, max_connections: 100, allowed_updates: [ 'message', 'edited_message', 'channel_post', 'edited_channel_post', 'inline_query', 'chosen_inline_result', 'poll' ] }, ( result ) => console.log( 'Telegram set', result ) )
 			}
 		},
-		send: ( method, data, callback ) => module.exports.http( true, 'api.telegram.org', 'post', 443, { 'Content-Type': 'application/json' }, ( '/bot' + module.exports.telegram.id + '/' + method ), data, callback ),
+		send: ( method, data, callback ) => module.exports.http( true, 'api.telegram.org', 'post', 443, module.exports.CONTENT_TYPE.json, ( '/bot' + module.exports.telegram.id + '/' + method ), data, callback ),
 		message: ( id, message, parseMode, silent, callback ) => module.exports.telegram.send( 'sendMessage', { chat_id: id, text: message, parse_mode: ( parseMode? parseMode: 'HTML' ), disable_notification: ( silent? true: false ) }, callback ),
 	},
 	soap: ( wsdlFile, callback ) => SOAP.createClient( wsdlFile, {}, ( err, client ) => callback( client ) ),
