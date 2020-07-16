@@ -2,12 +2,6 @@
 NK Central Libraries for NodeJS
 ------
 
-#### This library is defined and offered to make connecting to:
-1. NodeJS
-2. Express
-3. DIVI
-4. Bitcoin
-
 
 ###### How to install the library
 > npm i nk-node --save
@@ -18,7 +12,7 @@ NK Central Libraries for NodeJS
 ###### How to use express
 > NK.xpr.load();
 
-The express server can also be the SSL server (like a local web server), provide the location based on the domain name from let's encrypt 
+The express server can also be the SSL server (like a local web server), provide the location based on the domain name from let's encrypt
 
 > NK.xpr.load( "app.encke.com" );
 > NK.xpr.add( "get", "/user/:id", ( res, ip, requestedDATA, cookieOrSession, filesPosted, hostname ) => {
