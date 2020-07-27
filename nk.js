@@ -27,8 +27,8 @@ module.exports = {
 			WEEK: ( 7 * 24 * 60 * 60 * 1000 ),
 			MONTH: ( 30 * 7 * 24 * 60 * 60 * 1000 ) },
 	CONTENT_TYPE: { html: { "Content-Type": "text/html" },
-									plain: { "Content-Type": "text/plain" },
-									json: { "Content-Type": "application/json" } },
+					plain: { "Content-Type": "text/plain" },
+					json: { "Content-Type": "application/json" } },
 	shell: command => {
 		let shellText = ''
 		let shellResult = null
@@ -91,9 +91,9 @@ module.exports = {
 	randomInt: ( min, max ) => ( Math.floor( Math.random() * ( Math.floor( max ) - Math.ceil( min ) + 1 ) ) + Math.ceil( min ) ),
 	files: {
 		getDirList: folder => fs.readdirSync( folder ),
-		read: fileName => {
+		read: ( fileName, type ) => {
 			try	{
-				return fs.readFileSync( fileName, 'utf8' )
+				return fs.readFileSync( fileName, ( type? type: 'utf8' ) )
 			}	catch( e )	{
 				return null
 			}
